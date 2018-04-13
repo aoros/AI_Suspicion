@@ -1,0 +1,201 @@
+import java.util.*;
+
+/** This is the base class for computer player/bots. 
+ * 
+ */
+public class RBot2 extends Bot
+{
+    String name;
+    int numStartingGems;
+    String gemLocations;
+    String[] playerNames;
+    String[] guestNames;
+    Random r = new Random();
+    HashMap<String, Piece> pieces;
+    Board board;
+    Piece me;
+
+    public class Board
+    {
+        Room rooms[][];
+
+        public class Room
+        {
+            public final boolean gems[] = new boolean[3];
+            public final String[] availableGems;
+            public final int row;
+            public final int col;
+            private HashMap<String, Piece> pieces;
+            
+            public void removePlayer(Piece piece)
+            {
+                removePlayer(piece.name);
+                piece.col=-1;
+                piece.row=-1;
+            }
+
+            public void removePlayer(String name)
+            {
+                pieces.remove(name);
+            }
+            
+            public void addPlayer(Piece piece)
+            {
+                piece.col=this.col;
+                piece.row=this.row;
+                pieces.put(piece.name, piece);
+            }
+
+            public Room(boolean red, boolean green, boolean yellow, int row, int col)
+            {
+                pieces = new HashMap<String, Piece>();
+                this.row = row;
+                this.col = col;
+                gems[Suspicion.RED]=red;
+                gems[Suspicion.GREEN]=green;
+                gems[Suspicion.YELLOW]=yellow;
+                String temp="";
+                if(red) temp += "red,";
+                if(green) temp += "green,";
+                if(yellow) temp += "yellow,";
+                availableGems = (temp.substring(0,temp.length()-1)).split(",");
+            }
+        }
+        
+        public void clearRooms()
+        {
+            rooms=new Room[3][4];
+            rooms[0][0] = new Room(true, false, true, 0,0);
+            rooms[0][1] = new Room(true, false, true, 0,1);
+            rooms[0][2] = new Room(true, false, true, 0,2);
+            rooms[0][3] = new Room(true, false, true, 0,3);
+            rooms[1][0] = new Room(true, false, true, 1,0);
+            rooms[1][1] = new Room(true, false, true, 1,1);
+            rooms[1][2] = new Room(true, false, true, 1,2);
+            rooms[1][3] = new Room(true, false, true, 1,3);
+            rooms[2][0] = new Room(true, false, true, 2,0);
+            rooms[2][1] = new Room(true, false, true, 2,1);
+            rooms[2][2] = new Room(true, false, true, 2,2);
+            rooms[2][3] = new Room(true, false, true, 2,3);
+            
+        }
+
+        public Board(String piecePositions)
+        {
+            clearRooms();
+            int col=0;
+            int row=0;
+            for(String room:piecePositions.split(":",-1)) // Split out each room
+            {
+                room = room.trim();
+                if(room.length()!=0) for(String guest: room.split(",")) // Split guests out of each room
+                {
+                    guest = guest.trim();
+                    Piece piece = pieces.get(guest);
+                    rooms[row][col].addPlayer(piece);
+                }
+                col++;
+                row = row + col/4;
+                col = col%4;
+            }
+        }
+    }
+
+    public class Piece
+    {
+        int row, col;
+        String name;
+
+        public Piece(String name)
+        {
+            this.name = name;
+        }
+    }
+
+    private String[] getPossibleMoves(Piece p)
+    {
+        LinkedList<String> moves=new LinkedList<String>();
+        if(p.row > 0) moves.push((p.row-1) + "," + p.col);
+        if(p.row < 2) moves.push((p.row+1) + "," + p.col);
+        if(p.col > 0) moves.push((p.row) + "," + (p.col-1));
+        if(p.col < 3) moves.push((p.row) + "," + (p.col+1));
+
+        return moves.toArray(new String[moves.size()]);
+    }
+
+
+    public String getPlayerActions(String d1, String d2, String card1, String card2, String board) throws Suspicion.BadActionException
+    {
+        this.board = new Board(board);
+        String actions = "";
+
+        // Random move for dice1
+        Piece piece = pieces.get(d1);
+        String[] moves = getPossibleMoves(piece);
+        actions += "move," + d1 + "," + moves[r.nextInt(moves.length)];
+
+        // Random move for dice2
+        piece = pieces.get(d2);
+        moves = getPossibleMoves(piece);
+        actions += ":move," + d2 + "," + moves[r.nextInt(moves.length)];
+
+        // which card
+        int i = r.nextInt(2);
+        actions += ":play,card"+i;
+
+        String card = i==0?card1:card2;
+
+        for(String cardAction: card.split(":")) // just go ahead and do them in this order
+        {
+            if(cardAction.startsWith("move")) 
+            {
+                String guest;
+                if(cardAction.equals("move,")) guest = guestNames[r.nextInt(guestNames.length)];
+                else guest = cardAction.split(",")[1];
+                piece = pieces.get(cardAction.split(",")[1]);
+                moves = getPossibleMoves(piece);
+                actions += ":move," + guest + "," + moves[r.nextInt(moves.length)];
+            }
+            else if(cardAction.startsWith("viewDeck")) 
+            {
+                actions += ":viewDeck";
+            }
+            else if(cardAction.startsWith("get")) 
+            {
+                if(cardAction.equals("get,")) actions += ":get," + this.board.rooms[me.row][me.col].availableGems[r.nextInt(this.board.rooms[me.row][me.col].availableGems.length)];
+                else actions += ":" + cardAction;
+            }
+            else if(cardAction.startsWith("ask")) 
+            {
+                actions += ":" + cardAction + playerNames[r.nextInt(playerNames.length)]; // Might ask myself a question
+            }
+        }
+
+        return actions;
+    }
+
+    public void reportPlayerActions(String player, String d1, String d2, String cardPlayed, String board, String actions)
+    {
+    }
+    public void answerAsk(String guest, String player, String board, boolean canSee)
+    {
+    }
+    public void answerViewDeck(String player)
+    {
+    }
+    public String reportGuesses()
+    {
+        return "";
+    }
+
+    public RBot2(String playerName, String guestName, int numStartingGems, String gemLocations, String[] playerNames, String[] guestNames)
+    {
+        super(playerName, guestName, numStartingGems, gemLocations, playerNames, guestNames);
+        pieces = new HashMap<String, Piece>();
+        for(String name:guestNames)
+        {
+            pieces.put(name, new Piece(name));
+        }
+        me = pieces.get(guestName);
+    }
+}
