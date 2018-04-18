@@ -5,6 +5,7 @@ import java.lang.reflect.*;
 
 public class Suspicion {
 
+    private static final boolean MY_DEBUG = true;
     /* *******************************************************/
  /* **************** data declarations ********************/
  /* *******************************************************/
@@ -427,6 +428,7 @@ public class Suspicion {
     }
 
     private void loadPlayersFromFile(Vector<Bot> bots, String fname) throws Exception {
+        fname = "D:\\Users\\Daddio\\Documents\\NetBeansProjects\\AI_Suspicion\\Suspicion\\src\\players.txt";
         BufferedReader br = new BufferedReader(new FileReader(fname));
         String line;
         while ((line = br.readLine()) != null) {
@@ -737,21 +739,54 @@ public class Suspicion {
         botit = bots.iterator();
         while (botit.hasNext()) {
             BotManager bot = botit.next();
-            System.out.println("Guesses for bot " + bot.bot.playerName + ": " + bot.bot.reportGuesses());
+            if (MY_DEBUG) {
+                System.out.println("");
+                System.out.println("Possible Guesses for " + bot.bot.playerName + ":");
+                String[] reportGuesses = bot.bot.reportGuesses().split(":");
+                for (String reportGuess : reportGuesses) {
+                    String[] poss = reportGuess.split(",");
+                    System.out.print("   " + poss[0] + ":   ");
+                    if (poss.length > 1) {
+                        for (int i = 1; i < poss.length; i++) {
+                            System.out.print(poss[i].substring(0, 1) + ", ");
+                        }
+                        System.out.println("");
+                    }
+                }
+            } else {
+                System.out.println("Guesses for bot " + bot.bot.playerName + ": " + bot.bot.reportGuesses());
+            }
         }
 
-        System.out.println("Actual player IDs: " + getPlayerIDs());
+        if (MY_DEBUG) {
+            System.out.println("");
+            System.out.println("Actual Player IDs:");
+            System.out.println(getPlayerIDs());
+        } else {
+            System.out.println("Actual player IDs: " + getPlayerIDs());
+        }
     }
 
     public String getPlayerIDs() {
-        String playerIDs = "";
-        Iterator<BotManager> botit = bots.iterator();
-        while (botit.hasNext()) {
-            BotManager bot = botit.next();
-            playerIDs += bot.bot.playerName + "," + bot.bot.guestName + ":";
+        if (MY_DEBUG) {
+            String playerIDs = "";
+            Iterator<BotManager> botit = bots.iterator();
+            while (botit.hasNext()) {
+                BotManager bot = botit.next();
+                playerIDs += "   " + bot.bot.playerName + ": " + bot.bot.guestName.substring(0, 1) + "\n";
+            }
+            playerIDs = playerIDs.substring(0, playerIDs.length() - 1);
+            return playerIDs;
+        } else {
+            String playerIDs = "";
+            Iterator<BotManager> botit = bots.iterator();
+            while (botit.hasNext()) {
+                BotManager bot = botit.next();
+                playerIDs += bot.bot.playerName + "," + bot.bot.guestName + ":";
+            }
+            playerIDs = playerIDs.substring(0, playerIDs.length() - 1);
+            return playerIDs;
         }
-        playerIDs = playerIDs.substring(0, playerIDs.length() - 1);
-        return playerIDs;
     }
 
     public static void main(String[] args) throws Exception {

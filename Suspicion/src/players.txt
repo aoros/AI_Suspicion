@@ -1,2 +1,4 @@
 RBot.class
 RBot2.class
+RBot3.class
+My_RBot.class

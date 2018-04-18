@@ -1,0 +1,5 @@
+Make changes and then clean and build with NetBeans
+
+To run (run this in the build\classes folder):
+java Suspicion -loadplayers players.txt
+
