@@ -55,6 +55,8 @@ public class Suspicion {
     private Vector<BotManager> bots;
     private Vector<BotManager> deadbots;
 
+    private HashMap<String, Constructor> botConstructors;
+
     private Vector<String> playerFileNames;
     private String playerNames[];
     private Vector<String> playerNamesVector;
@@ -404,16 +406,13 @@ public class Suspicion {
     private void loadPlayerFromFile(Vector<Bot> bots, String fname, String pname, String guestName) throws Exception {
 
         System.out.println("Loading player " + fname);
-        Class cls = new MyClassLoader(fname).retClass();
-        Constructor[] ct = cls.getConstructors();
-        Object[] oarr = new Object[1];
-        oarr[0] = this;
-        //bots.add((Bot)(ct[0].newInstance(this)));
-        //String[] pnames = new String[playerFileNames.size()];
-        //pnames = playerFileNames.toArray(pnames);
-        //for(String str:pnames) System.out.println(str);
-        bots.add((Bot) (ct[0].newInstance(pname, guestName, 2 * playerFileNames.size(), board.getGemLocations(), playerNames, guestNames)));
-        //bots.add((ClobberBot)(ct[0].newInstance(oarr)));
+        if (!botConstructors.containsKey(fname)) {
+            Class cls = new MyClassLoader(fname).retClass();
+            botConstructors.put(fname, cls.getConstructors()[0]);
+        }
+        Constructor con = botConstructors.get(fname);
+
+        bots.add((Bot) (con.newInstance(pname, guestName, 2 * playerFileNames.size(), board.getGemLocations(), playerNames, guestNames)));
     }
 
     private void loadPlayersInDir(Vector<Bot> bots, String dirname) throws Exception {
@@ -428,7 +427,6 @@ public class Suspicion {
     }
 
     private void loadPlayersFromFile(Vector<Bot> bots, String fname) throws Exception {
-        fname = "D:\\Users\\Daddio\\Documents\\NetBeansProjects\\AI_Suspicion\\Suspicion\\src\\players.txt";
         BufferedReader br = new BufferedReader(new FileReader(fname));
         String line;
         while ((line = br.readLine()) != null) {
@@ -447,6 +445,7 @@ public class Suspicion {
 
         bots = new Vector<BotManager>();
         deadbots = new Vector<BotManager>();
+        botConstructors = new HashMap<String, Constructor>();
     }
 
     private void initDice() {
