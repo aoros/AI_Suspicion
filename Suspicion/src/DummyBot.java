@@ -1,5 +1,5 @@
 
-/** This is the base class for computer player/bots.
+/**
  *
  */
 public class DummyBot extends Bot {

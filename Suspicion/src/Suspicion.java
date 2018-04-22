@@ -5,7 +5,6 @@ import java.lang.reflect.*;
 
 public class Suspicion {
 
-    private static final boolean MY_DEBUG = true;
     /* *******************************************************/
  /* **************** data declarations ********************/
  /* *******************************************************/
@@ -64,6 +63,9 @@ public class Suspicion {
 
     private Vector<ArgHandler> argHandlers;
     private Random rand = new Random();
+
+    private ArrayList<Display> displays;
+    private ArrayList<String> displaysToLoad;
 
     private boolean tournament = false;
     private int numTournaments = 0;
@@ -166,18 +168,27 @@ public class Suspicion {
             players = new HashMap<String, BotManager>();
 
             rooms = new Room[3][4];
-            rooms[0][0] = new Room(true, false, true, 0, 0);
+            rooms[0][0] = new Room(true, false, false, 0, 0);
             rooms[0][1] = new Room(true, false, true, 0, 1);
-            rooms[0][2] = new Room(true, false, true, 0, 2);
-            rooms[0][3] = new Room(true, false, true, 0, 3);
-            rooms[1][0] = new Room(true, false, true, 1, 0);
-            rooms[1][1] = new Room(true, false, true, 1, 1);
+            rooms[0][2] = new Room(false, true, true, 0, 2);
+            rooms[0][3] = new Room(true, true, false, 0, 3);
+            rooms[1][0] = new Room(false, true, true, 1, 0);
+            rooms[1][1] = new Room(true, true, false, 1, 1);
             rooms[1][2] = new Room(true, false, true, 1, 2);
-            rooms[1][3] = new Room(true, false, true, 1, 3);
+            rooms[1][3] = new Room(false, false, true, 1, 3);
             rooms[2][0] = new Room(true, false, true, 2, 0);
-            rooms[2][1] = new Room(true, false, true, 2, 1);
-            rooms[2][2] = new Room(true, false, true, 2, 2);
-            rooms[2][3] = new Room(true, false, true, 2, 3);
+            rooms[2][1] = new Room(false, true, false, 2, 1);
+            rooms[2][2] = new Room(true, true, false, 2, 2);
+            rooms[2][3] = new Room(false, true, true, 2, 3);
+
+            /*for(int x=0;x<3;x++) for(int y=0;y<4;y++)
+            {
+                System.out.print(""+x+","+y+"=");
+                if(rooms[x][y].gems[0]) System.out.print("red,");
+                if(rooms[x][y].gems[1]) System.out.print("green,");
+                if(rooms[x][y].gems[2]) System.out.print("yellow,");
+                System.out.println();
+            }*/
         }
 
         public class Room {
@@ -238,17 +249,21 @@ public class Suspicion {
     /* *******************************************************/
  /* **************** arg handler stuff ********************/
  /* *******************************************************/
-    private class NoDisplayArg extends ArgHandler {
+    private class DisplayArg extends ArgHandler {
 
-        public NoDisplayArg() {
-            arg = "-nodisplay";
+        public DisplayArg() {
+            arg = "-display";
         }
 
         public int handleArg(String[] args, int x) throws Exception {
             if (argMatch(args[x])) {
-                display = false;
+                displaysToLoad.add(args[++x]);
                 return ++x;
             } else return x;
+        }
+
+        public String toString() {
+            return "[" + arg + " text|gui]";
         }
     }
 
@@ -335,7 +350,7 @@ public class Suspicion {
      */
     private void initArgHandlers() {
         argHandlers = new Vector<ArgHandler>();
-        argHandlers.add(new NoDisplayArg());
+        argHandlers.add(new DisplayArg());
         argHandlers.add(new TournamentArg());
         argHandlers.add(new DelayArg());
         argHandlers.add(new LoadPlayerArg());
@@ -405,9 +420,7 @@ public class Suspicion {
 
     private void loadPlayerFromFile(Vector<Bot> bots, String fname, String pname, String guestName) throws Exception {
 
-        if (!MY_DEBUG)
-            System.out.println("Loading player " + fname);
-
+        System.out.println("Loading player " + fname);
         if (!botConstructors.containsKey(fname)) {
             Class cls = new MyClassLoader(fname).retClass();
             botConstructors.put(fname, cls.getConstructors()[0]);
@@ -437,17 +450,46 @@ public class Suspicion {
     }
 
     public void printResults() {
+        Iterator<BotManager> botit = bots.iterator();
+        // Print out the guesses for every bot
+        botit = bots.iterator();
+        while (botit.hasNext()) {
+            BotManager bot = botit.next();
+            System.out.println("Guesses for bot " + bot.bot.playerName + ": " + bot.bot.reportGuesses());
+        }
+
+        System.out.println("Actual player IDs: " + getPlayerIDs());
+
+        System.out.println("Scores:");
+
+        botit = bots.iterator();
+        while (botit.hasNext()) {
+            BotManager bot = botit.next();
+            int score = 0;
+
+            System.out.print("" + bot.bot.playerName + ",");
+            String guesses[] = bot.bot.reportGuesses().trim().split(":");
+            for (String temp : guesses) {
+                String p = temp.trim().split(",")[0];
+                String g = temp.trim().split(",")[1];
+                if (board.players.get(g).bot.playerName.equals(p)) score += 7;
+            }
+            System.out.println(score);
+        }
+
     }
 
     public Suspicion(String[] args) {
         playerFileNames = new Vector<String>();
         playerDirNames = new Vector<String>();
+        displaysToLoad = new ArrayList<String>();
         initArgHandlers();
         getUserPrefs(args);
 
         bots = new Vector<BotManager>();
         deadbots = new Vector<BotManager>();
         botConstructors = new HashMap<String, Constructor>();
+
     }
 
     private void initDice() {
@@ -462,6 +504,13 @@ public class Suspicion {
         initDice();
         initBoard();
         initPlayers();
+
+        displays = new ArrayList<Display>();
+        for (String d : displaysToLoad) {
+            if (d.equalsIgnoreCase("text"))
+                displays.add(new TextDisplay(board.getGemLocations()));
+            else if (d.equalsIgnoreCase("gui")) ;
+        }
     }
 
     void initBoard() {
@@ -498,7 +547,7 @@ public class Suspicion {
         }
 
         for (x = 0; x < 3; x++)
-            gems[x] = 2 * bots.size();
+            gems[x] = 12 * bots.size();
     }
 
     private boolean isFourConnectedTwoMoves(BotManager bot, int row, int col) {
@@ -562,7 +611,9 @@ public class Suspicion {
             throw new ActionException("Bad card exception: card actions not found on card.");
 
         if (!checkCardAction(player, a1, ca1)) return false;
+        else performAction(player, a1);
         if (!checkCardAction(player, a2, ca2)) return false;
+        else performAction(player, a2);
 
         return true;
     }
@@ -584,7 +635,7 @@ public class Suspicion {
             if (action.equals(cardAction)) return true;
             //check if gem in get is in room player is in
             if (!board.roomHasGem(player.row, player.col, action.split(",")[1]))
-                throw new ActionException("Bad get action from card, gem not found in room.");
+                throw new ActionException("Bad get action from card, gem not found in room " + player.row + "," + player.col + ".");
             return true;
         } else if (action.startsWith("ask")) {
             if (!playerNamesVector.contains(action.split(",")[2]))
@@ -609,12 +660,14 @@ public class Suspicion {
             //Check the dice actions
             if (!checkDiceAction(dice1, actions[0].trim()))
                 throw new ActionException("Bad action on first dice throw: " + dice1.getFace() + " " + actions[0].trim());
-            if (actions[0].trim().split(",")[1].trim().equals(actions[1].trim().split(",")[1].trim())) // Moving the same player twice in a row
+            else performAction(bot, actions[0].trim());
+            /*if(actions[0].trim().split(",")[1].trim().equals(actions[1].trim().split(",")[1].trim())) // Moving the same player twice in a row
             {
-                if (!checkDiceAction2Moves(dice2, actions[1].trim()))
-                    throw new ActionException("Bad action on second dice throw: " + dice2.getFace() + " " + actions[1].trim());
-            } else if (!checkDiceAction(dice2, actions[1].trim()))
+                if(!checkDiceAction2Moves(dice2, actions[1].trim())) throw new ActionException("Bad action on second dice throw: " + dice2.getFace() + " " + actions[1].trim());
+            }*/
+            if (!checkDiceAction(dice2, actions[1].trim()))
                 throw new ActionException("Bad action on second dice throw: " + dice2.getFace() + " " + actions[1].trim());
+            else performAction(bot, actions[1].trim());
 
             //Get the played card
             String cardToPlay = actions[2].trim();
@@ -698,25 +751,33 @@ public class Suspicion {
 
     }
 
+    private void performAction(BotManager bot, String action) {
+        action = action.trim();
+        if (action.startsWith("move")) performMove(action);
+        else if (action.startsWith("play")) playCard(bot, action);
+        else if (action.startsWith("viewDeck")) viewDeck(bot);
+        else if (action.startsWith("get")) getGem(bot, action);
+        else if (action.startsWith("ask")) ask(bot, action);
+        else throw new RuntimeException("Bad action " + action);
+    }
+
     private void performActions(BotManager bot, String actionString) {
         String[] actions = actionString.split(":");
         for (String action : actions) {
-            action = action.trim();
-            if (action.startsWith("move")) performMove(action);
-            else if (action.startsWith("play")) playCard(bot, action);
-            else if (action.startsWith("viewDeck")) viewDeck(bot);
-            else if (action.startsWith("get")) getGem(bot, action);
-            else if (action.startsWith("ask")) ask(bot, action);
-            else throw new RuntimeException("Bad action " + action);
+            performAction(bot, action.trim());
+        }
+    }
+
+    private void displayPlayerActions(String player, String actions, String board) {
+        for (Display d : displays) {
+            d.displayPlayerActionSequence(player, actions, board);
         }
     }
 
     private void play() throws Exception {
 
         initGameState();
-        if (!MY_DEBUG)
-            System.out.println("Actual player IDs: " + getPlayerIDs());
-
+        System.out.println("Actual player IDs: " + getPlayerIDs());
         Iterator<BotManager> botit = bots.iterator();
         while (gems[RED] > 0 && gems[GREEN] > 0 && gems[YELLOW] > 0) {
             if (!botit.hasNext()) botit = bots.iterator();
@@ -724,74 +785,33 @@ public class Suspicion {
             dice1.roll();
             dice2.roll();
             String actions = bot.bot.getPlayerActions(dice1.getFace(), dice2.getFace(), bot.cards[0].getFaceValue(), bot.cards[1].getFaceValue(), board.getPlayerLocations());
-            if (!MY_DEBUG) {
-                System.out.println(board.getPlayerLocations());
-                System.out.println(actions);
-            }
+            //System.out.println(board.getPlayerLocations());
+            //System.out.println(actions);
+            displayPlayerActions(bot.bot.playerName, actions, board.getPlayerLocations());
             if (legalActions(bot, actions)) {
-                String card = actions.split(":")[2].trim().split(",")[1].trim();
-                int cardNum = Integer.parseInt(card.substring(card.length() - 1, card.length())) - 1;
-                for (BotManager b : bots) {
-                    b.bot.reportPlayerActions(b.bot.playerName, dice1.getFace(), dice2.getFace(), bot.cards[cardNum].getFaceValue(), board.getPlayerLocations(), actions);
+                /*String card = actions.split(":")[2].trim().split(",")[1].trim();
+                int cardNum = Integer.parseInt(card.substring(card.length()-1,card.length()))-1;
+                for(BotManager b: bots)
+                {
+                    b.bot.reportPlayerActions(b.bot.playerName, dice1.getFace(), dice2.getFace(), bot.cards[cardNum].getFaceValue(), board.getPlayerLocations(),actions);
                 }
-                performActions(bot, actions);
+                performActions(bot,actions);*/
             } else {
                 System.out.println("BAD action by player " + bot.bot.playerName);
             }
         }
 
-        // Print out the guesses for every bot
-        botit = bots.iterator();
-        while (botit.hasNext()) {
-            BotManager bot = botit.next();
-            if (MY_DEBUG) {
-                System.out.println("");
-                System.out.println("Possible Guesses for " + bot.bot.playerName + ":");
-                String[] reportGuesses = bot.bot.reportGuesses().split(":");
-                for (String reportGuess : reportGuesses) {
-                    String[] poss = reportGuess.split(",");
-                    System.out.print("   " + poss[0] + ":   ");
-                    if (poss.length > 1) {
-                        for (int i = 1; i < poss.length; i++) {
-                            System.out.print(poss[i].substring(0, 1) + ", ");
-                        }
-                        System.out.println("");
-                    }
-                }
-            } else {
-                System.out.println("Guesses for bot " + bot.bot.playerName + ": " + bot.bot.reportGuesses());
-            }
-        }
-
-        if (MY_DEBUG) {
-            System.out.println("");
-            System.out.println("Actual Player IDs:");
-            System.out.println(getPlayerIDs());
-        } else {
-            System.out.println("Actual player IDs: " + getPlayerIDs());
-        }
     }
 
     public String getPlayerIDs() {
-        if (MY_DEBUG) {
-            String playerIDs = "";
-            Iterator<BotManager> botit = bots.iterator();
-            while (botit.hasNext()) {
-                BotManager bot = botit.next();
-                playerIDs += "   " + bot.bot.playerName + ": " + bot.bot.guestName.substring(0, 1) + "\n";
-            }
-            playerIDs = playerIDs.substring(0, playerIDs.length() - 1);
-            return playerIDs;
-        } else {
-            String playerIDs = "";
-            Iterator<BotManager> botit = bots.iterator();
-            while (botit.hasNext()) {
-                BotManager bot = botit.next();
-                playerIDs += bot.bot.playerName + "," + bot.bot.guestName + ":";
-            }
-            playerIDs = playerIDs.substring(0, playerIDs.length() - 1);
-            return playerIDs;
+        String playerIDs = "";
+        Iterator<BotManager> botit = bots.iterator();
+        while (botit.hasNext()) {
+            BotManager bot = botit.next();
+            playerIDs += bot.bot.playerName + "," + bot.bot.guestName + ":";
         }
+        playerIDs = playerIDs.substring(0, playerIDs.length() - 1);
+        return playerIDs;
     }
 
     public static void main(String[] args) throws Exception {

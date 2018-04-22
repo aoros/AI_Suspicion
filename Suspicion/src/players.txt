@@ -1,4 +1,8 @@
 RBot.class
-RBot2.class
-RBot3.class
-My_RBot.class
+RBotMike.class
+RBotSmart.class
+RBotDumb.class
+RBot.class
+RBotMike.class
+RBotSmart.class
+RBotDumb.class

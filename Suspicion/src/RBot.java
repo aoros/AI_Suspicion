@@ -14,9 +14,10 @@ public class RBot extends Bot {
     HashMap<String, Player> players; // Keyed off of player name
     String otherPlayerNames[];
 
-    public class Board {
+    public static class Board {
 
         public Room rooms[][];
+        public String gemLocations;
 
         public class Room {
 
@@ -64,23 +65,49 @@ public class RBot extends Bot {
 
         public void clearRooms() {
             rooms = new Room[3][4];
-            rooms[0][0] = new Room(true, false, true, 0, 0);
-            rooms[0][1] = new Room(true, false, true, 0, 1);
-            rooms[0][2] = new Room(true, false, true, 0, 2);
-            rooms[0][3] = new Room(true, false, true, 0, 3);
-            rooms[1][0] = new Room(true, false, true, 1, 0);
-            rooms[1][1] = new Room(true, false, true, 1, 1);
-            rooms[1][2] = new Room(true, false, true, 1, 2);
-            rooms[1][3] = new Room(true, false, true, 1, 3);
-            rooms[2][0] = new Room(true, false, true, 2, 0);
-            rooms[2][1] = new Room(true, false, true, 2, 1);
-            rooms[2][2] = new Room(true, false, true, 2, 2);
-            rooms[2][3] = new Room(true, false, true, 2, 3);
+            /*rooms[0][0] = new Room(true, false, true, 0,0);
+            rooms[0][1] = new Room(true, false, true, 0,1);
+            rooms[0][2] = new Room(true, false, true, 0,2);
+            rooms[0][3] = new Room(true, false, true, 0,3);
+            rooms[1][0] = new Room(true, false, true, 1,0);
+            rooms[1][1] = new Room(true, false, true, 1,1);
+            rooms[1][2] = new Room(true, false, true, 1,2);
+            rooms[1][3] = new Room(true, false, true, 1,3);
+            rooms[2][0] = new Room(true, false, true, 2,0);
+            rooms[2][1] = new Room(true, false, true, 2,1);
+            rooms[2][2] = new Room(true, false, true, 2,2);
+            rooms[2][3] = new Room(true, false, true, 2,3);*/
 
+            int x = 0, y = 0;
+            boolean red, green, yellow;
+            //System.out.println(gemLocations);
+            for (String gems : gemLocations.trim().split(":")) {
+                if (gems.contains("red")) red = true;
+                else red = false;
+                if (gems.contains("green")) green = true;
+                else green = false;
+                if (gems.contains("yellow")) yellow = true;
+                else yellow = false;
+                rooms[x][y] = new Room(red, green, yellow, x, y);
+                y++;
+                x += y / 4;
+                y %= 4;
+            }
+
+            /*for(x=0;x<3;x++) for(y=0;y<4;y++)
+            {
+                System.out.print(""+x+","+y+"=");
+                if(rooms[x][y].gems[0]) System.out.print("red,");
+                if(rooms[x][y].gems[1]) System.out.print("green,");
+                if(rooms[x][y].gems[2]) System.out.print("yellow,");
+                System.out.println();
+            }
+            System.exit(0);*/
         }
 
-        public Board(String piecePositions, HashMap<String, Piece> pieces) {
+        public Board(String piecePositions, HashMap<String, Piece> pieces, String gemLocations) {
             Piece piece;
+            this.gemLocations = gemLocations;
             clearRooms();
             int col = 0;
             int row = 0;
@@ -149,7 +176,7 @@ public class RBot extends Bot {
     }
 
     public String getPlayerActions(String d1, String d2, String card1, String card2, String board) throws Suspicion.BadActionException {
-        this.board = new Board(board, pieces);
+        this.board = new Board(board, pieces, gemLocations);
         String actions = "";
 
         // Random move for dice1
@@ -204,7 +231,7 @@ public class RBot extends Bot {
     }
 
     public void answerAsk(String guest, String player, String board, boolean canSee) {
-        Board b = new Board(board, pieces);
+        Board b = new Board(board, pieces, gemLocations);
         ArrayList<String> possibleGuests = new ArrayList<String>();
         Piece p1 = pieces.get(guest);  // retrieve the guest 
         for (String k : pieces.keySet()) {
