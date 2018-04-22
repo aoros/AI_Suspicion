@@ -405,7 +405,9 @@ public class Suspicion {
 
     private void loadPlayerFromFile(Vector<Bot> bots, String fname, String pname, String guestName) throws Exception {
 
-        System.out.println("Loading player " + fname);
+        if (!MY_DEBUG)
+            System.out.println("Loading player " + fname);
+
         if (!botConstructors.containsKey(fname)) {
             Class cls = new MyClassLoader(fname).retClass();
             botConstructors.put(fname, cls.getConstructors()[0]);
@@ -712,7 +714,9 @@ public class Suspicion {
     private void play() throws Exception {
 
         initGameState();
-        System.out.println("Actual player IDs: " + getPlayerIDs());
+        if (!MY_DEBUG)
+            System.out.println("Actual player IDs: " + getPlayerIDs());
+
         Iterator<BotManager> botit = bots.iterator();
         while (gems[RED] > 0 && gems[GREEN] > 0 && gems[YELLOW] > 0) {
             if (!botit.hasNext()) botit = bots.iterator();
@@ -720,8 +724,10 @@ public class Suspicion {
             dice1.roll();
             dice2.roll();
             String actions = bot.bot.getPlayerActions(dice1.getFace(), dice2.getFace(), bot.cards[0].getFaceValue(), bot.cards[1].getFaceValue(), board.getPlayerLocations());
-            System.out.println(board.getPlayerLocations());
-            System.out.println(actions);
+            if (!MY_DEBUG) {
+                System.out.println(board.getPlayerLocations());
+                System.out.println(actions);
+            }
             if (legalActions(bot, actions)) {
                 String card = actions.split(":")[2].trim().split(",")[1].trim();
                 int cardNum = Integer.parseInt(card.substring(card.length() - 1, card.length())) - 1;
