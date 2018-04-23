@@ -819,7 +819,75 @@ public class Suspicion {
         if (game.tournament) {
         } else {
             game.play();
-            game.printResults();
+//            game.printResults();
+            game.abesPrintResults();
+        }
+    }
+
+    public void abesPrintResults() {
+        abesPrintOutGuesses();
+        abesPrintOutPlayerIDs();
+        abesPrintOutScores();
+    }
+
+    private void abesPrintOutGuesses() {
+        // Print out the guesses for every bot
+        Iterator<BotManager> botit = bots.iterator();
+        while (botit.hasNext()) {
+            BotManager bot = botit.next();
+
+            System.out.println("");
+            System.out.println("Possible Guesses for " + bot.bot.playerName + ":");
+            String[] reportGuesses = bot.bot.reportGuesses().split(":");
+            for (String reportGuess : reportGuesses) {
+                String[] poss = reportGuess.split(",");
+                System.out.print("   " + poss[0] + ":   ");
+                if (poss.length > 1) {
+                    for (int i = 1; i < poss.length; i++) {
+                        System.out.print(poss[i].substring(0, 1) + ", ");
+                    }
+                    System.out.println("");
+                }
+            }
+        }
+    }
+
+    private void abesPrintOutPlayerIDs() {
+        System.out.println("");
+        System.out.println("Actual Player IDs:");
+
+        String playerIDs = "";
+        Iterator<BotManager> botit = bots.iterator();
+        while (botit.hasNext()) {
+            BotManager bot = botit.next();
+            playerIDs += "   " + bot.bot.playerName + ": " + bot.bot.guestName.substring(0, 1) + "\n";
+        }
+        System.out.println(playerIDs.substring(0, playerIDs.length() - 1));
+    }
+
+    private void abesPrintOutScores() {
+        System.out.println("");
+        System.out.println("Scores:");
+
+        Iterator<BotManager> botit = bots.iterator();
+        while (botit.hasNext()) {
+            BotManager bot = botit.next();
+            int score = 0;
+
+            System.out.println("For player " + bot.bot.playerName + "");
+            String guesses[] = bot.bot.reportGuesses().trim().split(":");
+            for (String temp : guesses) {
+                String p = temp.trim().split(",")[0];
+                String g = temp.trim().split(",")[1];
+                System.out.print(p + " is " + g);
+                if (board.players.get(g).bot.playerName.equals(p)) {
+                    System.out.println(" is correct");
+                    score += 7;
+                } else 
+                    System.out.println(" is NOT correct");
+            }
+            System.out.println(score);
+            System.out.println("");
         }
     }
 }
