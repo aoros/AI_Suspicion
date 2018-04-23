@@ -1,11 +1,18 @@
 
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.Stream.Builder;
 
 /**
- * This is the base class for computer player/bots.
+ * This class uses the basic idea of probability to decide the best guess for
+ * the suspect reporting at the end of the game. Also added the method to remove
+ * guest names from the possible suspects when the "peek at deck" action card is
+ * played.
  *
+ * @author Abraham Oros
  */
-public class My_RBot extends Bot {
+public class Abe_RBot_02 extends Bot {
 
     Random r = new Random();
     HashMap<String, Piece> pieces; // Keyed off of guest name
@@ -13,6 +20,43 @@ public class My_RBot extends Bot {
     Piece me;
     HashMap<String, Player> players; // Keyed off of player name
     String otherPlayerNames[];
+    private static final boolean PRINT_OUT_ALL_POSSIBLE_GUESSES = false;
+    private final String[] allCharacters = {"Buford Barnswallow", "Earl of Volesworthy", "Mildred Wellington", "Nadia Bwalya",
+        "Viola Chung", "Dr. Ashraf Najem", "Remy La Rocque", "Lily Nesbit", "Trudie Mudge",
+        "Stefano Laconi"};
+
+    private void debugPrintOutPlayerPossibleGuesses() {
+        for (String k : players.keySet()) {
+            Player p = players.get(k);
+            System.out.println(k + " -> " + p.possibleGuestNames);
+        }
+    }
+
+    private Map<String, String> getGuessBasedOnProbabilities() {
+        Map<String, String> plyrToGuessMap = new HashMap<>();
+
+        Collection<List<String>> allPerms = getAllGuessPermutations();
+        Collection<List<String>> filteredPerms = removeInvalidPermutations(allPerms);
+
+        int i = 0;
+        for (String plyrName : players.keySet()) {
+            int lastCount = 0;
+            for (String charName : allCharacters) {
+                int count = 0;
+                for (List<String> perm : filteredPerms) {
+                    if (charName.equals(perm.get(i)))
+                        count++;
+                }
+                if (count > lastCount) {
+                    plyrToGuessMap.put(plyrName, charName);
+                    lastCount = count;
+                }
+            }
+            i++;
+        }
+
+        return plyrToGuessMap;
+    }
 
     public class Board {
 
@@ -119,6 +163,10 @@ public class My_RBot extends Bot {
             }
         }
 
+        public void removeGuessFromPossibles(String guess) {
+            possibleGuestNames.remove(guess);
+        }
+
         public Player(String name, String[] guests) {
             playerName = name;
             possibleGuestNames = new ArrayList<String>();
@@ -153,7 +201,7 @@ public class My_RBot extends Bot {
         String actions = "";
 
         // Random move for dice1
-        if (d1.equals("?")) d1 = guestNames[r.nextInt(guestNames.length)];
+        if (d1.equals("?")) d1 = allCharacters[r.nextInt(allCharacters.length)];
         Piece piece = pieces.get(d1);
         String[] moves = getPossibleMoves(piece);
         int movei = r.nextInt(moves.length);
@@ -161,7 +209,7 @@ public class My_RBot extends Bot {
         this.board.movePlayer(piece, Integer.parseInt(moves[movei].split(",")[0]), Integer.parseInt(moves[movei].split(",")[1])); // Perform the move on my board
 
         // Random move for dice2
-        if (d2.equals("?")) d2 = guestNames[r.nextInt(guestNames.length)];
+        if (d2.equals("?")) d2 = allCharacters[r.nextInt(allCharacters.length)];
         piece = pieces.get(d2);
         moves = getPossibleMoves(piece);
         movei = r.nextInt(moves.length);
@@ -178,7 +226,7 @@ public class My_RBot extends Bot {
         {
             if (cardAction.startsWith("move")) {
                 String guest;
-                guest = guestNames[r.nextInt(guestNames.length)];
+                guest = allCharacters[r.nextInt(allCharacters.length)];
                 piece = pieces.get(guest);
                 //moves = getPossibleMoves(piece);
                 actions += ":move," + guest + "," + r.nextInt(3) + "," + r.nextInt(4);
@@ -216,27 +264,110 @@ public class My_RBot extends Bot {
         players.get(player).adjustKnowledge(possibleGuests);
     }
 
-    public void answerViewDeck(String player) {
+    public void answerViewDeck(String guestName) {
+        for (Player plyr : players.values())
+            plyr.removeGuessFromPossibles(guestName);
     }
 
     public String reportGuesses() {
         String rval = "";
-        for (String k : players.keySet()) {
-            Player p = players.get(k);
-            rval += k;
-            for (String g : p.possibleGuestNames) {
-                rval += "," + g;
+        if (PRINT_OUT_ALL_POSSIBLE_GUESSES) {
+            for (String k : players.keySet()) {
+                Player p = players.get(k);
+                rval += k;
+                for (String g : p.possibleGuestNames) {
+                    rval += "," + g;
+                }
+                rval += ":";
             }
-            rval += ":";
+        } else {
+            Map<String, String> plyrToGuessMap = getGuessBasedOnProbabilities();
+            rval = "";
+            for (String plyrName : players.keySet()) {
+                rval += plyrName;
+                rval += "," + plyrToGuessMap.get(plyrName);
+                rval += ":";
+            }
         }
+
         return rval.substring(0, rval.length() - 1);
     }
-    
-    private String getBestOneGuess() {
-        return "";
+
+    private String getGuessBasedOnCountOfAppearances(String playerName) {
+        String guess = "";
+        Player player = players.get(playerName);
+        Map<String, Integer> guestNameToCountMap = buildGuestNameCountMap();
+        Integer lastCount = Integer.MAX_VALUE;
+        for (String suspect : player.possibleGuestNames) {
+            Integer count = guestNameToCountMap.get(suspect);
+            if (count < lastCount) {
+                guess = suspect;
+                lastCount = count;
+            }
+        }
+        return guess;
     }
 
-    public My_RBot(String playerName, String guestName, int numStartingGems, String gemLocations, String[] playerNames, String[] guestNames) {
+    private Collection<List<String>> getAllGuessPermutations() {
+        Builder<Collection<String>> inputBuilder = Stream.<Collection<String>>builder();
+        for (String plyrName : players.keySet()) {
+            Player player = players.get(plyrName);
+            inputBuilder.add(player.possibleGuestNames);
+        }
+
+        Stream<Collection<List<String>>> listified = inputBuilder.build().filter(Objects::nonNull)
+                .filter(input -> !input.isEmpty())
+                .map(l -> l.stream()
+                .map(o -> new ArrayList<>(Arrays.asList(o)))
+                .collect(Collectors.toList()));
+
+        Collection<List<String>> combinations = listified.reduce((input1, input2) -> {
+            Collection<List<String>> merged = new ArrayList<>();
+            input1.forEach(permutation1 -> input2.forEach(permutation2 -> {
+                List<String> combination = new ArrayList<>();
+                combination.addAll(permutation1);
+                combination.addAll(permutation2);
+                merged.add(combination);
+            }));
+            return merged;
+        }).orElse(new HashSet<>());
+
+//        combinations.forEach(System.out::println);
+        return combinations;
+    }
+
+    private Collection<List<String>> removeInvalidPermutations(Collection<List<String>> allPerms) {
+        Collection<List<String>> filteredPermutations = new ArrayList<>();
+        for (List<String> perm : allPerms) {
+            Set<String> temp = new HashSet<>();
+            for (String guess : perm) {
+                if (!temp.contains(guess))
+                    temp.add(guess);
+            }
+            if (perm.size() == temp.size())
+                filteredPermutations.add(perm);
+        }
+        return filteredPermutations;
+    }
+
+    private Map<String, Integer> buildGuestNameCountMap() {
+        Map<String, Integer> guestNameToCountMap = new HashMap<>();
+        for (String k : players.keySet()) {
+            Player p = players.get(k);
+            for (String g : p.possibleGuestNames) {
+                Integer gCount = guestNameToCountMap.get(g);
+                if (gCount != null) {
+                    gCount++;
+                } else {
+                    gCount = 1;
+                }
+                guestNameToCountMap.put(g, gCount);
+            }
+        }
+        return guestNameToCountMap;
+    }
+
+    public Abe_RBot_02(String playerName, String guestName, int numStartingGems, String gemLocations, String[] playerNames, String[] guestNames) {
         super(playerName, guestName, numStartingGems, gemLocations, playerNames, guestNames);
         pieces = new HashMap<String, Piece>();
         ArrayList<String> possibleGuests = new ArrayList<String>();

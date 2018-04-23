@@ -8,6 +8,7 @@ public class Suspicion {
     /* *******************************************************/
  /* **************** data declarations ********************/
  /* *******************************************************/
+    private static final int NUM_GEMS_PER_BOT = 5;
     private Deck actionDeck;
     private Deck guestDeck;
     private Dice dice1, dice2;
@@ -547,7 +548,7 @@ public class Suspicion {
         }
 
         for (x = 0; x < 3; x++)
-            gems[x] = 12 * bots.size();
+            gems[x] = NUM_GEMS_PER_BOT * bots.size();
     }
 
     private boolean isFourConnectedTwoMoves(BotManager bot, int row, int col) {
@@ -866,6 +867,7 @@ public class Suspicion {
     }
 
     private void abesPrintOutScores() {
+        boolean verboseScoreOutput = false;
         System.out.println("");
         System.out.println("Scores:");
 
@@ -879,12 +881,18 @@ public class Suspicion {
             for (String temp : guesses) {
                 String p = temp.trim().split(",")[0];
                 String g = temp.trim().split(",")[1];
-                System.out.print(p + " is " + g);
-                if (board.players.get(g).bot.playerName.equals(p)) {
-                    System.out.println(" is correct");
-                    score += 7;
-                } else 
-                    System.out.println(" is NOT correct");
+
+                if (!verboseScoreOutput) {
+                    if (board.players.get(g).bot.playerName.equals(p))
+                        score += 7;
+                } else {
+                    System.out.print(p + " is " + g);
+                    if (board.players.get(g).bot.playerName.equals(p)) {
+                        score += 7;
+                        System.out.println(" is correct");
+                    } else
+                        System.out.println(" is NOT correct");
+                }
             }
             System.out.println(score);
             System.out.println("");
