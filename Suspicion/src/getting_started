@@ -1,0 +1,2 @@
+cd D:\Users\Daddio\Documents\NetBeansProjects\AI_Suspicion\Suspicion\build\classes
+java Suspicion -loadplayers players.txt -display text
