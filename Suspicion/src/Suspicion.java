@@ -466,16 +466,25 @@ public class Suspicion {
         botit = bots.iterator();
         while (botit.hasNext()) {
             BotManager bot = botit.next();
-            int score = 0;
+            int guessScore = 0;
+            int gemScore = 0;
 
             System.out.print("" + bot.bot.playerName + ",");
             String guesses[] = bot.bot.reportGuesses().trim().split(":");
             for (String temp : guesses) {
                 String p = temp.trim().split(",")[0];
                 String g = temp.trim().split(",")[1];
-                if (board.players.get(g).bot.playerName.equals(p)) score += 7;
+                if (board.players.get(g).bot.playerName.equals(p))
+                    guessScore += 7;
             }
-            System.out.println(score);
+
+            gemScore = bot.gems[0] + bot.gems[1] + bot.gems[2];
+            int min = bot.gems[0];
+            if (bot.gems[1] < min) min = bot.gems[1];
+            if (bot.gems[2] < min) min = bot.gems[2];
+            gemScore += 3 * min;
+
+            System.out.println(guessScore + "," + gemScore + "," + (guessScore + gemScore));
         }
 
     }
@@ -494,8 +503,8 @@ public class Suspicion {
     }
 
     private void initDice() {
-        String diceFaces1[] = {"Buford Barnswallow", "Earl of Volesworthy", "Mildred Wellington", "Viola Chung", "Dr. Ashraf Najem"};
-        String diceFaces2[] = {"Mildred Wellington", "Viola Chung", "Lily Nesbit", "Trudie Mudge", "Stefano Laconi"};
+        String diceFaces1[] = {"Buford Barnswallow", "Earl of Volesworthy", "Mildred Wellington", "Viola Chung", "Dr. Ashraf Najem", "?"};
+        String diceFaces2[] = {"Nadia Bwalya", "Remy La Rocque", "Lily Nesbit", "Trudie Mudge", "Stefano Laconi", "?"};
         dice1 = new Dice(diceFaces1);
         dice2 = new Dice(diceFaces2);
     }
@@ -679,6 +688,7 @@ public class Suspicion {
             //Check the card actions against the played card
             if (!checkCardActionsAgainstCard(bot, actions[3].trim(), actions[4].trim(), card))
                 throw new ActionException("Bad card action: " + card.getFaceValue() + " : " + actions[3].trim() + " : " + actions[4].trim());
+            else playCard(bot, cardToPlay);
         } catch (RuntimeException e) {
             System.out.println(e);
             return false;
