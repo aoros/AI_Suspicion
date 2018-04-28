@@ -10,6 +10,7 @@ public class Suspicion {
  /* *******************************************************/
     private static final int NUM_GEMS_PER_BOT = 5;
     private Deck actionDeck;
+    private String lastCardPlayed;
     private Deck guestDeck;
     private Dice dice1, dice2;
     private int gems[] = new int[3];
@@ -505,6 +506,8 @@ public class Suspicion {
     private void initDice() {
         String diceFaces1[] = {"Buford Barnswallow", "Earl of Volesworthy", "Mildred Wellington", "Viola Chung", "Dr. Ashraf Najem", "?"};
         String diceFaces2[] = {"Nadia Bwalya", "Remy La Rocque", "Lily Nesbit", "Trudie Mudge", "Stefano Laconi", "?"};
+        //String diceFaces1[] = {"?", "?"};
+        //String diceFaces2[] = {"?", "?"};
         dice1 = new Dice(diceFaces1);
         dice2 = new Dice(diceFaces2);
     }
@@ -607,7 +610,7 @@ public class Suspicion {
         return true;
     }
 
-    private boolean checkCardActionsAgainstCard(BotManager player, String a1, String a2, Card card) {
+    private boolean checkCardActionsAgainstCard(BotManager player, String a1, String a2, Card card, String[] boardStates) {
         String cardActions[] = card.getFaceValue().split(":");
         String ca1, ca2;
         if (a1.startsWith(cardActions[0]) && a2.startsWith(cardActions[1])) {
@@ -621,9 +624,9 @@ public class Suspicion {
             throw new ActionException("Bad card exception: card actions not found on card.");
 
         if (!checkCardAction(player, a1, ca1)) return false;
-        else performAction(player, a1);
+        else boardStates[3] = performAction(player, a1);
         if (!checkCardAction(player, a2, ca2)) return false;
-        else performAction(player, a2);
+        else boardStates[4] = performAction(player, a2);
 
         return true;
     }
@@ -661,23 +664,25 @@ public class Suspicion {
         }
     }
 
-    private boolean legalActions(BotManager bot, String actionString) {
+    private boolean legalActions(BotManager bot, String actionString, String[] boardStates) {
         String[] actions = actionString.split(":");
         int cardNumber;
         Card card;
+
+        boardStates[0] = board.getPlayerLocations();
 
         try {
             //Check the dice actions
             if (!checkDiceAction(dice1, actions[0].trim()))
                 throw new ActionException("Bad action on first dice throw: " + dice1.getFace() + " " + actions[0].trim());
-            else performAction(bot, actions[0].trim());
+            else boardStates[1] = performAction(bot, actions[0].trim());
             /*if(actions[0].trim().split(",")[1].trim().equals(actions[1].trim().split(",")[1].trim())) // Moving the same player twice in a row
             {
                 if(!checkDiceAction2Moves(dice2, actions[1].trim())) throw new ActionException("Bad action on second dice throw: " + dice2.getFace() + " " + actions[1].trim());
             }*/
             if (!checkDiceAction(dice2, actions[1].trim()))
                 throw new ActionException("Bad action on second dice throw: " + dice2.getFace() + " " + actions[1].trim());
-            else performAction(bot, actions[1].trim());
+            else boardStates[2] = performAction(bot, actions[1].trim());
 
             //Get the played card
             String cardToPlay = actions[2].trim();
@@ -686,7 +691,7 @@ public class Suspicion {
             card = bot.cards[cardNumber];
 
             //Check the card actions against the played card
-            if (!checkCardActionsAgainstCard(bot, actions[3].trim(), actions[4].trim(), card))
+            if (!checkCardActionsAgainstCard(bot, actions[3].trim(), actions[4].trim(), card, boardStates))
                 throw new ActionException("Bad card action: " + card.getFaceValue() + " : " + actions[3].trim() + " : " + actions[4].trim());
             else playCard(bot, cardToPlay);
         } catch (RuntimeException e) {
@@ -715,6 +720,7 @@ public class Suspicion {
 
         int cardNumber = Integer.parseInt(temp.substring(temp.length() - 1, temp.length())) - 1;
 
+        lastCardPlayed = bot.cards[cardNumber].getFaceValue();
         actionDeck.discard(bot.cards[cardNumber]);
         if (actionDeck.isEmpty()) actionDeck.shuffle();
         bot.cards[cardNumber] = actionDeck.drawCard();
@@ -762,7 +768,7 @@ public class Suspicion {
 
     }
 
-    private void performAction(BotManager bot, String action) {
+    private String performAction(BotManager bot, String action) {
         action = action.trim();
         if (action.startsWith("move")) performMove(action);
         else if (action.startsWith("play")) playCard(bot, action);
@@ -770,6 +776,8 @@ public class Suspicion {
         else if (action.startsWith("get")) getGem(bot, action);
         else if (action.startsWith("ask")) ask(bot, action);
         else throw new RuntimeException("Bad action " + action);
+
+        return board.getPlayerLocations();
     }
 
     private void performActions(BotManager bot, String actionString) {
@@ -786,7 +794,6 @@ public class Suspicion {
     }
 
     private void play() throws Exception {
-
         initGameState();
         System.out.println("Actual player IDs: " + getPlayerIDs());
         Iterator<BotManager> botit = bots.iterator();
@@ -799,16 +806,19 @@ public class Suspicion {
             //System.out.println(board.getPlayerLocations());
             //System.out.println(actions);
             displayPlayerActions(bot.bot.playerName, actions, board.getPlayerLocations());
-            if (legalActions(bot, actions)) {
+            String[] boardStates = new String[5];
+            if (legalActions(bot, actions, boardStates)) {
                 /*String card = actions.split(":")[2].trim().split(",")[1].trim();
-                int cardNum = Integer.parseInt(card.substring(card.length()-1,card.length()))-1;
-                for(BotManager b: bots)
-                {
-                    b.bot.reportPlayerActions(b.bot.playerName, dice1.getFace(), dice2.getFace(), bot.cards[cardNum].getFaceValue(), board.getPlayerLocations(),actions);
-                }
-                performActions(bot,actions);*/
+                int cardNum = Integer.parseInt(card.substring(card.length()-1,card.length()))-1;*/
+                //performActions(bot,actions);
             } else {
                 System.out.println("BAD action by player " + bot.bot.playerName);
+            }
+            String card = actions.split(":")[2].trim().split(",")[1].trim();
+            int cardNum = Integer.parseInt(card.substring(card.length() - 1, card.length())) - 1;
+            for (BotManager b : bots) {
+                //b.bot.reportPlayerActions(bot.bot.playerName, dice1.getFace(), dice2.getFace(), lastCardPlayed, board.getPlayerLocations(),actions);
+                b.bot.reportPlayerActions(bot.bot.playerName, dice1.getFace(), dice2.getFace(), lastCardPlayed, boardStates, actions);
             }
         }
 

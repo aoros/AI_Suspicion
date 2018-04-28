@@ -222,7 +222,18 @@ public class RBot extends Bot {
         return actions;
     }
 
+    public void reportPlayerActions(String player, String d1, String d2, String cardPlayed, String board[], String actions) {
+        int x = 0;
+        System.out.println(board[x++]);
+        for (String a : actions.split(":")) {
+            if (a.contains("play")) continue;
+            System.out.println("Action: " + a);
+            System.out.println(board[x++]);
+        }
+    }
+
     public void reportPlayerActions(String player, String d1, String d2, String cardPlayed, String board, String actions) {
+        System.out.println("Player Actions: " + actions);
     }
 
     private boolean canSee(Piece p1, Piece p2) // returns whether or not these two pieces see each 

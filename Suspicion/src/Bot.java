@@ -54,6 +54,10 @@ public abstract class Bot {
      */
     public abstract void reportPlayerActions(String player, String d1, String d2, String cardPlayed, String board, String actions);
 
+    public void reportPlayerActions(String player, String d1, String d2, String cardPlayed, String[] board, String actions) {
+        reportPlayerActions(player, d1, d2, cardPlayed, board[4], actions);
+    }
+
     /**
      * The game calls this method to answer the question can player see guest?
      *
