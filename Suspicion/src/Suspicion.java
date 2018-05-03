@@ -110,7 +110,8 @@ public class Suspicion {
                 for (int y = 0; y < 4; y++) {
                     boolean comma = false;
                     for (BotManager bot : rooms[x][y].players.values()) {
-                        if (comma) rval += ",";
+                        if (comma) 
+                            rval += ",";
                         comma = true;
                         rval += bot.bot.guestName;
                     }
