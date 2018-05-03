@@ -841,7 +841,7 @@ public class Suspicion {
         } else {
             game.play();
 //            game.printResults();
-//            game.abesPrintResults();
+            game.abesPrintResults();
         }
     }
 
