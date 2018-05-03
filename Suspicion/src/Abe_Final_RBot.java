@@ -149,10 +149,8 @@ public class Abe_Final_RBot extends Bot {
     private String buildActionString(Turn turn) {
         String actions = turn.getMove1().toString();
         actions += ":" + turn.getMove2().toString();
-
         actions += ":" + turn.getFirstAction().getActionString();
         actions += ":" + turn.getSecondAction().getActionString();
-
         return actions;
     }
 
